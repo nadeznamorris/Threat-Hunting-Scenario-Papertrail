@@ -27,9 +27,23 @@ An attacker blended routine HR activity with discovery, defense evasion, and cle
 ## :hourglass_flowing_sand: Attack Narrative (Chronological)
 
 ### :triangular_flag_on_post: Flag 0 - Starting Point
-- **Observation:** To scope the intrusion, the first query targeted HR-related file paths (HR, HumanResources, Payroll, Benefits) across all available endpoints. The logic was to surface any machines showing interaction with sensitive HR directories during the incident window. Host `n4thani3l-vm` stood out, logging 3 unique access counts. This initial pivot established the system of interest and framed subsequent hunts around this endpoint.
 
-!
+**Observation:** 
+To scope the intrusion, the first query targeted HR-related file paths (HR, HumanResources, Payroll, Benefits) across all available endpoints. The logic was to surface any machines showing interaction with sensitive HR directories during the incident window. Host `n4thani3l-vm` stood out, logging 3 unique access counts. This initial pivot established the system of interest and framed subsequent hunts around this endpoint.
+
+
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%200.png" alt="Starting point 0" width="400" style="border: 3px solid black;" />
+
+**KQL Query :**
+```kusto
+DeviceFileEvents
+| where Timestamp >= datetime(2025-08-17)
+| where FolderPath has_any ("HR", "HumanResources", "Payroll", "Benefits")
+| summarize count() by DeviceName
+| order by count_ desc
+```
+
+**Why this matter :**
 
 ---
 
