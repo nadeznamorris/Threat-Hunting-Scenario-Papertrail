@@ -26,4 +26,12 @@ An attacker blended routine HR activity with discovery, defense evasion, and cle
 
 ## :hourglass_flowing_sand: Attack Narrative (Chronological)
 
-### :triangular_flag_on_post: Flag 0 Starting Point
+### :triangular_flag_on_post: Flag 0 - Starting Point
+- **Observation:** To scope the intrusion, the first query targeted HR-related file paths (HR, HumanResources, Payroll, Benefits) across all available endpoints. The logic was to surface any machines showing interaction with sensitive HR directories during the incident window. Host `n4thani3l-vm` stood out, logging 3 unique access counts. This initial pivot established the system of interest and framed subsequent hunts around this endpoint.
+
+
+
+**Screenshot:** `![Fig-01 — Initial PS Recon](./images/Fig-01-Initial-PS-Recon.png)`
+
+---
+
