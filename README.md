@@ -375,4 +375,33 @@ Detecting these outbound “pings” is critical because they can indicate cover
 
 ---
 
+## :door: Flag 11 - Persistence via Local Scripting
+
+**Objective :**  
+Verify if unauthorized persistence was established via legacy tooling.
+
+**Flag Value :**  
+`OnboardTracker.ps1`
+
+**What To Hunt :**  
+Use of startup configurations tied to non-standard executables.
+
+**Strategy :**  
+We queried `DeviceRegistryEvents` on the VM for registry changes involving `Run` and `RunOnce` keys, which are commonly abused for persistence. By focusing on `RegistryValueSet` and `RegistryKeyCreated` actions, we could **detect unauthorized startup configurations**. We then examined the `RegistryValueData` to identify any non-standard executables or scripts. This review revealed a suspicious entry pointing to `OnboardTracker.ps1`, confirming that persistence was established through a local PowerShell script.
+
+**KQL Query :**  
+```
+DeviceRegistryEvents
+| where DeviceName == "n4thani3l-vm"
+| where ActionType in ("RegistryValueSet", "RegistryKeyCreated")
+| where RegistryKey has_any ("\\Run", "\\RunOnce")
+| project Timestamp, DeviceName, RegistryKey, RegistryValueName, RegistryValueData
+| order by Timestamp desc
+```
+
+
+**Why This Matter :**  
+Persistence via **autorun registry keys** ensures that malicious code executes whenever the system starts, allowing attackers to maintain long-term access. The use of a **PowerShell script disguised as a business tool** makes the persistence stealthy and difficult to detect. Identifying this technique is critical because it highlights an active backdoor that could allow attackers to **repeatedly re-enter the environment even after remediation steps**. Removing the registry value, investigating script origins, and checking for similar entries across other systems are essential to contain the threat.
+
+---
 
