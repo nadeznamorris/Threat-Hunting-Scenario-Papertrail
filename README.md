@@ -467,7 +467,7 @@ Modifications to structured HR files, especially those tied to promotions, indic
 
 ---
 
-## Flag 14 - Audit Trail Disruption
+## :broom: Flag 14 - Audit Trail Disruption
 
 **Objective :**  
 Detect attempts to impair system forensics.
@@ -497,7 +497,7 @@ Clearing logs is a well-known **anti-forensic technique** used by attackers to e
 
 ---
 
-## Flag 15 - Final Cleanup and Exit Prep
+## :snowboarder: Flag 15 - Final Cleanup and Exit Prep
 
 **Objective :**  
 Capture the combination of anti-forensics actions signaling attacker exit.
@@ -522,7 +522,11 @@ union DeviceFileEvents, DeviceProcessEvents, DeviceRegistryEvents
 | order by Timestamp desc
 ```
 
-
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2015%20log.png" alt="Flag 15 log" height="240" />
 
 **Why This Matter :**
 Final cleanup actions are critical indicators of **attacker exit strategy**. These behaviors include **artifact deletion, tampering with logging, and disabling security controls**, all aimed at erasing forensic evidence and ensuring persistence traces are removed. Detecting the **last cleanup attempt** is essential for **defining the attack timeline**, preserving evidence before it’s lost, and ensuring remediation covers not only the intrusion but also the **forensic obfuscation techniques** used by the adversary.
+
+---
+
+
