@@ -437,7 +437,7 @@ Repeated or anomalous access to a specific personnel file often signals the **at
 
 ---
 
-## Flag 13 - Candidate List Manipulation
+## :ledger: Flag 13 - Candidate List Manipulation
 
 **Objective :**  
 Trace tampering with promotion-related data.
@@ -460,10 +460,37 @@ DeviceFileEvents
 | order by Timestamp asc 
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2013%20log.png" alt="Flag 13 log" height="240" />
 
 **Why This Matter :**  
 Modifications to structured HR files, especially those tied to promotions, indicate **data tampering or staging for exfiltration**. Attackers often manipulate or duplicate files before extraction to either cover tracks or alter outcomes. Detecting the **first instance of modification** is crucial, as it provides defenders with a **clear timeline of compromise** and ensures that the altered file version can be investigated, validated, and remediated.
 
 ---
 
+## Flag 14 - Audit Trail Disruption
 
+**Objective :**  
+Detect attempts to impair system forensics.
+
+**Flag Value :**  
+`2025-08-19T04:55:48.9660467Z`
+
+**What To Hunt :**  
+Operations aimed at removing historical system activity.
+
+**Strategy :**  
+We queried `DeviceProcessEvents` on the VM for commands commonly associated with **audit trail disruption**, including `wevtutil``, Clear-EventLog`, `Clear-History`, `Remove-Item`, and `ConsoleHost_history`. By projecting fields like `Timestamp`, `ProcessCommandLine`, and `SHA256`, and sorting the results in **ascending order**, we identified the **first recorded attempt** to clear system logs and impair forensic visibility. This occurred at `2025-08-19T04:55:48.9660467Z`.
+
+**KQL Query :**  
+```
+DeviceProcessEvents
+| where DeviceName == "n4thani3l-vm"
+| where ProcessCommandLine has_any ("wevtutil", "Clear-EventLog", "Clear-History", "Remove-Item", "ConsoleHost_history")
+| project Timestamp, InitiatingProcessFileName, ProcessCommandLine, SHA256
+| order by Timestamp asc
+```
+
+
+
+**Why This Matter :**  
+Clearing logs is a well-known **anti-forensic technique** used by attackers to erase evidence of their activity. Detecting the **first attempt to tamper** with logs is crucial because it marks the transition from **stealthy compromise** to **covering tracks**, directly impacting an investigation’s ability to reconstruct events. Early detection of such activity enables defenders to **preserve system evidence** and prioritize containment.
