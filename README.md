@@ -490,7 +490,39 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
-
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2014%20log.png" alt="Flag 14 log" height="240" />
 
 **Why This Matter :**  
 Clearing logs is a well-known **anti-forensic technique** used by attackers to erase evidence of their activity. Detecting the **first attempt to tamper** with logs is crucial because it marks the transition from **stealthy compromise** to **covering tracks**, directly impacting an investigation’s ability to reconstruct events. Early detection of such activity enables defenders to **preserve system evidence** and prioritize containment.
+
+---
+
+## Flag 15 - Final Cleanup and Exit Prep
+
+**Objective :**  
+Capture the combination of anti-forensics actions signaling attacker exit.
+
+**Flag Value :**  
+`2025-08-19T05:08:11.8528871Z`
+
+**What To Hunt :**  
+Artifact deletions, security tool misconfigurations, and trace removals.
+
+**Strategy :**  
+We ran a `union` query across `DeviceFileEvents`, `DeviceProcessEvents`, and `DeviceRegistryEvents` on the targeted VM to capture a broad view of potential **anti-forensics and cleanup actions**. Filters were applied to identify suspicious file names (such as `employee`, `hr`, `sysmon`, `history`, `log`), commands associated with log clearing or artifact deletion (like `wevtutil`, `Clear-EventLog`, `Clear-History`, `Remove-Item`, `EmptySysmonConfig.xml`), and registry keys linked to persistence or security tools (`Policies`, `Defender`, `Run`). By projecting relevant fields and sorting by **descending timestamp**, we pinpointed the **last attempt at cleanup and exit prep** at `2025-08-19T05:08:11.8528871Z`.
+
+**KQL Query :**
+```
+union DeviceFileEvents, DeviceProcessEvents, DeviceRegistryEvents
+| where DeviceName == "n4thani3l-vm"
+| where FileName has_any ("employee", "hr", "sysmon", "history", "log")
+   or ProcessCommandLine has_any ("wevtutil", "Clear-EventLog", "Clear-History", "Remove-Item", "EmptySysmonConfig.xml")
+   or RegistryKey has_any ("Policies", "Defender", "Run")
+| project Timestamp, ActionType, FileName, FolderPath, ProcessCommandLine, InitiatingProcessFileName, RegistryKey, RegistryValueName
+| order by Timestamp desc
+```
+
+
+
+**Why This Matter :**
+Final cleanup actions are critical indicators of **attacker exit strategy**. These behaviors include **artifact deletion, tampering with logging, and disabling security controls**, all aimed at erasing forensic evidence and ensuring persistence traces are removed. Detecting the **last cleanup attempt** is essential for **defining the attack timeline**, preserving evidence before it’s lost, and ensuring remediation covers not only the intrusion but also the **forensic obfuscation techniques** used by the adversary.
