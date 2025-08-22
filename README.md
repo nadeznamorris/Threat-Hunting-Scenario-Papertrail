@@ -422,17 +422,48 @@ We queried `DeviceFileEvents` on the VM to track file activity related to HR and
 
 **KQL Query :**  
 ```
-DeviceFileEvents
+DeviceFileEvents 
 | where DeviceName == "n4thani3l-vm"
 | where FileName has_any ("employee", "hr", "payroll", "personnel", "staff", "records")
       or FolderPath has_any ("HR", "Employee", "Payroll", "Users", "Documents")
-| project Timestamp, FileName, FolderPath, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine
-| order by Timestamp asc
+| summarize AccessCount = count() by Timestamp, FileName, FolderPath, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by AccessCount desc
 ```
 
-
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2012%20log.png" alt="Flag 12 log" height="240" />
 
 **Why This Matter :**  
 Repeated or anomalous access to a specific personnel file often signals the **attacker’s intent or motive**. In this case, targeting **“Carlos Tanaka Evaluation”** suggests a focus on sensitive employee information that could be exploited for **espionage, insider leverage, or financial gain**. Highlighting such files is critical because it provides defenders with **insight into the adversary’s objectives**, allowing for focused containment and deeper investigation.
+
+---
+
+## Flag 13 - Candidate List Manipulation
+
+**Objective :**  
+Trace tampering with promotion-related data.
+
+**Flag Value :**  
+`df5e35a8dcecdf1430af7001c58f3e9e9faafa05`
+
+**What To Hunt :**  
+Unexpected modifications to structured HR records.
+
+**Strategy :**  
+We queried `DeviceFileEvents` for the VM to focus specifically on `FileModified` actions. By projecting relevant fields such as `FileName`, `FolderPath`, `InitiatingProcessCommandLine`, and `SHA1`, and ordering the results by **timestamp ascending**, we identified the **first modification event** for the targeted HR record. This approach confirmed the tampering activity and allowed us to capture the associated **SHA1 value:** `df5e35a8dcecdf1430af7001c58f3e9e9faafa05`.
+
+**KQL Query :**
+```
+DeviceFileEvents
+| where DeviceName == "n4thani3l-vm"
+| where ActionType contains "FileModified"
+| summarize by Timestamp, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessCommandLine, SHA1
+| order by Timestamp asc 
+```
+
+
+**Why This Matter :**  
+Modifications to structured HR files, especially those tied to promotions, indicate **data tampering or staging for exfiltration**. Attackers often manipulate or duplicate files before extraction to either cover tracks or alter outcomes. Detecting the **first instance of modification** is crucial, as it provides defenders with a **clear timeline of compromise** and ensures that the altered file version can be investigated, validated, and remediated.
+
+---
 
 
