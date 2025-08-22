@@ -253,7 +253,7 @@ Changing the `DisableAntiSpyware` registry value effectively turns off a core la
 
 ---
 
-## Flag 7 - Access to Credential-Rich Memory Space
+## :moneybag: Flag 7 - Access to Credential-Rich Memory Space
 
 **Objective :**  
 Identify if the attacker dumped memory content from a sensitive process.
@@ -277,6 +277,37 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
+<img src=https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%207%20log.png alt="Flag 7 log" height="250" />
 
 **Why This Matter :**  
 Memory dumping of **LSASS or similar processes** is a direct path to extracting credentials, giving attackers the keys to escalate privilege and move laterally. The presence of a file like `HRConfig.json` in this context shows deliberate masquerading, blending malicious actions with trusted HR workflows. Detecting such misuse is critical, because once credentials are stolen from memory, attackers can impersonate legitimate users and expand control across the environment.
+
+---
+
+## Flag 8 - File Inspection of Dumped Artifacts
+
+**Objective :**  
+Detect whether memory dump contents were reviewed post-collection.
+
+**Flag Value :**  
+`"notepad.exe" C:\HRTools\HRConfig.json`
+
+**What To Hunt :**  
+Signs of local tools accessing sensitive or unusually named files.
+
+**Strategy :**  
+We queried `DeviceProcessEvents` for any processes accessing the previously identified sensitive file `HRConfig.json`. By filtering for the specific `DeviceName` and examining the `ProcessCommandLine` for references to the file, we were able to detect whether local applications (like `notepad.exe`) were used to open or review dumped memory artifacts. This leveraged prior findings about the file involved in credential-rich memory access
+
+**KQL Query :**  
+```
+DeviceProcessEvents
+| where DeviceName == "n4thani3l-vm"
+| where ProcessCommandLine has_any ("HRConfig.json")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, SHA256
+| order by Timestamp asc
+```
+
+<img src=https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%207%20log.png alt="Flag 7 log" height="250" />
+
+**Why This Matters :**  
+Detecting post-dump inspection is crucial because dumping memory alone doesn’t compromise sensitive data—an attacker must review the contents to extract valuable information. Identifying the use of local tools accessing unusually named or sensitive files helps confirm adversary behavior beyond collection, informing response and mitigation steps.
