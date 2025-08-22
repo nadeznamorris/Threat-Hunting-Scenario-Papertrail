@@ -1,6 +1,8 @@
 # Threat-Hunting-Scenario-Papertrail
 
-An attacker blended routine HR activity with discovery, defense evasion, and cleanup on Windows host **`n4thani3l-vm`**. The sequence began with **PowerShell-based reconnaissance**, progressed through **local admin discovery** and **session enumeration**, then **tampered with Microsoft Defender** before testing **outbound connectivity** and laying **persistence** via autorun keys. Targeted access to **personnel documents** and **promotion artifacts** was observed, followed by deliberate **audit-trail disruption** (command history, event logs, and telemetry). The activity window closes with a coordinated **final clean-up**.
+A sudden promotion caught everyone off guard. **A mid-level employee, with no real achievements, suddenly rose in rank**. Whispers spread, but the truth was buried deeper — in the HR systems. **Audit logs were wiped, performance reports rewritten, and sensitive evaluations quietly stolen**. Someone was rewriting history from the inside.
+
+Behind it all was an intruder who knew how to blend in: **PowerShell trickery, stealthy file manipulation, and careful obfuscation** hid their tracks. That’s where you step in. The mission is simple but critical: **trace the insider’s moves, expose the fake artifacts, and rebuild the timeline they tried to erase**. Only then can the hidden motive behind a promotion that should never have happened come fully into view.
 
 :key: **Key Calls:**
 - Privileged group check: `"powershell.exe" net localgroup Administrators`
@@ -223,7 +225,7 @@ Tampering with Defender settings signals an attacker’s effort to **evade detec
 
 ---
 
-## :hammer: Flag 6 - Defender Policy Modification
+## 🛡️ Flag 6 - Defender Policy Modification
 
 **Objective :**  
 Validate if core system protection settings were modified.
@@ -524,14 +526,51 @@ union DeviceFileEvents, DeviceProcessEvents, DeviceRegistryEvents
 
 <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2015%20log.png" alt="Flag 15 log" height="240" />
 
-**Why This Matter :**
+**Why This Matter :**  
 Final cleanup actions are critical indicators of **attacker exit strategy**. These behaviors include **artifact deletion, tampering with logging, and disabling security controls**, all aimed at erasing forensic evidence and ensuring persistence traces are removed. Detecting the **last cleanup attempt** is essential for **defining the attack timeline**, preserving evidence before it’s lost, and ensuring remediation covers not only the intrusion but also the **forensic obfuscation techniques** used by the adversary.
 
 ---
 
 ## Summary
-This threat hunting scenario demonstrates how seemingly routine business events, like a sudden promotion, can mask deeper malicious activity. Through systematic investigation, we uncovered signs of credential access, memory dumping, unauthorized persistence, covert outbound communication, data staging, and deliberate audit trail disruption, all culminating in final cleanup attempts before the attacker’s exit. By correlating these activities across process, file, and registry events, we reconstructed the adversary’s timeline and exposed how insider-driven manipulation of HR records shaped the false narrative. The case highlights the importance of proactive hunting, cross-event correlation, and forensic vigilance to reveal hidden motives and safeguard organizational integrity.
+By the close of the investigation, the pattern became clear. **Credentials had been harvested, HR files accessed and altered, persistence planted, and outbound channels tested**. Along the way, we saw **Defender settings tampered with, audit trails disrupted, and promotion records rewritten**. Each action on its own could look routine — but together they painted a picture of an insider carefully covering their tracks.
+
+Through **systematic threat hunting across process, file, registry, and network telemetry**, we were able to **reconstruct the attacker’s timeline** and expose the motive behind a promotion that should never have happened. What looked like an unexplained career jump was really the end result of **credential theft, data tampering, and anti-forensic cleanup**.
+
+In the end, the breach showed us how **ordinary business artifacts can be weaponized** and how only **proactive, correlated hunting** can surface the truth buried beneath the noise.
 
 ---
 
+## 🧩 MITRE ATT&CK Technique Mapping
 
+| Flag | MITRE Technique                                      | ID            | Description                                                                   |
+| ---- | ---------------------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
+| 1    | Command and Scripting Interpreter: PowerShell        | **T1059.001** | Initial suspicious PowerShell execution used to establish entry.              |
+| 2    | System Information Discovery                         | **T1082**     | Local account enumeration via `Get-LocalUser` and group queries.              |
+| 3    | Permission Groups Discovery: Local Groups            | **T1069.001** | Checking membership of the Administrators group for privilege reconnaissance. |
+| 4    | System Owner/User Discovery                          | **T1033**     | Session enumeration with `qwinsta.exe` to identify active logons.             |
+| 5    | Impair Defenses: Disable or Modify Tools             | **T1562.001** | Disabling Windows Defender real-time monitoring via PowerShell.               |
+| 6    | Modify Registry                                      | **T1112**     | Setting `DisableAntiSpyware` registry value to weaken defenses.               |
+| 7    | OS Credential Dumping                                | **T1003**     | Dumping LSASS-related memory under disguise of HR-themed file.                |
+| 8    | Data from Local System                               | **T1005**     | Inspection of dumped artifacts (`HRConfig.json`) with local tools.            |
+| 9    | Application Layer Protocol: Web Traffic              | **T1071.001** | Outbound communication to `.net` domain via lightweight requests.             |
+| 10   | Application Layer Protocol: ICMP                     | **T1071.004** | Covert data transfer attempt using ICMP ping to `3.234.58.20`.                |
+| 11   | Boot or Logon Autostart Execution: Registry Run Keys | **T1547.001** | Persistence established with autorun script `OnboardTracker.ps1`.             |
+| 12   | Data from Information Repositories                   | **T1213**     | Repeated access to sensitive personnel file (`Carlos Tanaka Evaluation`).     |
+| 13   | Data Manipulation                                    | **T1565**     | Modification of candidate evaluation list to alter promotion outcome.         |
+| 14   | Indicator Removal on Host: Clear Windows Event Logs  | **T1070.001** | First audit trail disruption with `wevtutil` and history clearing.            |
+| 15   | Indicator Removal on Host                            | **T1070**     | Final cleanup and exit prep: deletion, misconfigurations, trace removals.     |
+
+---
+
+## 🛠️ Remediation Recommendations
+
+- **Isolate compromised host** (`n4thani3l-vm`) immediately to prevent further spread.  
+- **Reset local and domain credentials** for accounts potentially exposed via LSASS dumping.  
+- **Re-enable and enforce Defender/AV protections**, restoring tampered registry keys (`DisableAntiSpyware`, `Set-MpPreference`).  
+- **Remove persistence mechanisms** (e.g., autorun `OnboardTracker.ps1`) and inspect for similar entries across endpoints.  
+- **Block outbound connections** to identified suspicious IPs (`3.234.58.20`) and TLDs (`.net`).  
+- **Restore and validate HR files** (e.g., `Carlos Tanaka Evaluation`, candidate lists) to ensure integrity.  
+- **Harden PowerShell usage** via constrained language mode, logging, and just-in-time admin rights.  
+- **Increase monitoring for anti-forensic activity**, e.g., log clearing (`wevtutil`, `Clear-History`).  
+- **Review and tighten access controls** around sensitive HR directories.  
+- **Conduct enterprise-wide threat hunt** for similar indicators (registry changes, outbound traffic patterns, HR-themed artifacts).  
