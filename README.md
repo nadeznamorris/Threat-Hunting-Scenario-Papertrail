@@ -28,11 +28,14 @@ An attacker blended routine HR activity with discovery, defense evasion, and cle
 
 ### :triangular_flag_on_post: Flag 0 - Starting Point
 
-**Observation:**  
+**Objective :**  
 During the hunt for suspicious HR-related activity, we scoped file events starting **17th August 2025** and identified that `n4thani3l-vm` had the highest activity, with **3 file event counts** linked to sensitive HR directories (`HR`, `HumanResources`, `Payroll`, `Benefits`). To further validate, we pivoted to process activity and observed an unusually high execution rate of **994 processes** on the same device within the period `2025-08-19T04:15:54` UTC – `2025-08-20T03:05:00` UTC, which strongly indicated abnormal behavior consistent with script or config drops. This correlation of targeted HR file access and elevated process activity pinpointed `n4thani3l-vm` as the source of the breach.
 
+**Flag Value :**  
+`n4thani3l-vm`
+
 **KQL Query :**
-```kusto
+```
 DeviceFileEvents
 | where Timestamp >= datetime(2025-08-17)
 | where FolderPath has_any ("HR", "HumanResources", "Payroll", "Benefits")
@@ -40,7 +43,7 @@ DeviceFileEvents
 | order by count_ desc
 ```
 
-```kusto
+```
 DeviceProcessEvents
 | where Timestamp between (datetime(2025-08-19T04:15:54.0914923Z)..datetime(2025-08-20T03:05:00.6841797Z))
 | summarize ProcessCount = count() by DeviceName
@@ -65,6 +68,9 @@ Attackers frequently stage activity around HR and payroll data because it contai
 **Objective:**  
 Pinpoint the earliest suspicious PowerShell activity that marks the intruder's possible entry.
 
+**Flag Value :**  
+`2025-08-19T03:42:32.9389416Z`
+
 **What to Hunt:**  
 Initial signs of PowerShell being used in a way that deviates from baseline usage.
 
@@ -72,13 +78,43 @@ Initial signs of PowerShell being used in a way that deviates from baseline usag
 To uncover the initial intrusion point, we filtered **process execution events** `(DeviceProcessEvents)` specifically on the compromised host `n4thani3l-vm`. By pivoting on **PowerShell executions** and reviewing the earliest recorded activity, we isolated a suspicious process with creation time `2025-08-19T03:42:32.9389416Z`. This timestamp highlights the **first deviation from baseline PowerShell usage**, marking the attacker’s entry vector. Starting the hunt from the earliest trace ensures we capture the origin of compromise, which is crucial for reconstructing the attacker’s full activity chain.
 
 **KQL Query :**
-```DeviceProcessEvents
+```
+DeviceProcessEvents
 // where Timestamp >= datetime(2025-08-19)
 | where DeviceName == "n4thani3l-vm"
 // where ProcessCommandLine has_any ("HR", "HR_Policy_Update", "HRHostnames", "HumanResources")
 | summarize by Timestamp, FileName, ActionType, ProcessCommandLine, FolderPath
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%201%20log.png" alt="Flag 1 log" height="220" />
 
+**Why this matter :**  
+Identifying the **first suspicious PowerShell execution** on `n4thani3l-vm` at `2025-08-19T03:42:32.9389416Z` matters because it marks the attacker’s initial entry point, giving us the root of the intrusion timeline. Catching this earliest trace is critical to understand how the breach began and to prevent misinterpreting later activity as isolated. The use of the `whoami` command right after entry indicates the attacker was **validating their access level and privileges**, a common first step before deciding whether privilege escalation or further movement is needed.
 
+---
 
+### 📚 Flag 2 - Local Account Assessment
+
+**Objective :**  
+Map user accounts available on the system.
+
+**Flag Value :**  
+`9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`
+
+**What to Hunt :**  
+PowerShell queries that enumerates local identities.
+
+**Strategy :**  
+To uncover attempts at local account enumeration, we scoped **PowerShell execution** (`powershell.exe`) within the timeframe **2025-08-17 to 2025-08-20** and filtered for commands explicitly tied to account discovery such as `Get-LocalUser` and `net localgroup Administrators`. This helped surface the exact process instance tied to suspicious account mapping, where the SHA256 value `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3` was observed. By projecting relevant fields like timestamp, device, parent process, and command line, we ensured both attribution and traceability of the activity.
+
+**KQL Query :**
+```
+DeviceProcessEvents
+| where Timestamp between (datetime(2025-08-17) .. datetime(2025-08-20))
+| where FileName =~ "powershell.exe"
+| where ProcessCommandLine has_any ("Get-LocalUser", "net localgroup Administrators")
+| project Timestamp, DeviceName, InitiatingProcessFileName, FileName, ProcessCommandLine, SHA256
+```
+
+**Why this matter :**  
+Local account enumeration is a classic **reconnaissance step** intruders take after validating initial access. It enables them to identify privileged accounts for potential escalation or impersonation. Spotting this behavior early gives defenders a chance to respond before attackers leverage administrator accounts to widen their control across the system.
