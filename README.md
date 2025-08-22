@@ -189,7 +189,7 @@ Active session enumeration enables attackers to identify **who is currently logg
 
 ---
 
-### Flag 5 - Defender Configuration Recon
+### :unlock: Flag 5 - Defender Configuration Recon
 
 **Objective :**  
 Expose tampering or inspection of AV defenses, disguised under HR activity.
@@ -212,7 +212,44 @@ This showed clear attempts to disable real-time monitoring while dropping a mali
 union DeviceProcessEvents, DeviceRegistryEvents
 | where DeviceName == "n4thani3l-vm"
 | where ProcessCommandLine has_any ("MpCmdRun", "Get-MpComputerStatus", "Set-MpPreference", "Add-MpPreference", "DisableRealtimeMonitoring", "RemoveDefinitions", "sc stop windefend")
-| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, SHA256
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
+| order by Timestamp asc
 ```
 
-<img src="" alt="Flag  log" height="220" />
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%205%20log.png" alt="Flag 5 log" height="220" />
+
+**Why This Matter :**  
+Tampering with Defender settings signals an attacker’s effort to **evade detection and establish persistence**. By turning off protections under the guise of normal HR tooling, they create a blind spot for malicious payloads to execute unhindered. Spotting this activity early is critical, as once defenses are weakened, attackers can escalate their intrusion without triggering standard endpoint alerts.
+
+---
+
+## Flag 6 - Defender Policy Modification
+
+**Objective :**  
+Validate if core system protection settings were modified.
+
+**Flag Value :**  
+`DisableAntiSpyware`
+
+**What To Hunt :**  
+Policy or configuration changes that affect baseline defensive posture.
+
+**Strategy :**  
+To confirm whether endpoint protections were weakened, we pivoted into **registry activity** using `DeviceRegistryEvents` scoped to `n4thani3l-vm`. By filtering on keys related to Windows Defender, we surfaced modification attempts tied to security policy. Projecting fields such as `RegistryKey`, `RegistryValueName`, and `RegistryValueData` allowed us to pinpoint the exact change, where the registry value `DisableAntiSpyware` was modified. Tracking this field is essential because it directly impacts whether the system runs with active anti-spyware protections.
+
+**KQL Query :**  
+```
+DeviceRegistryEvents
+| where DeviceName == "n4thani3l-vm"
+| where RegistryKey has "Windows Defender"
+| project Timestamp, DeviceName, ActionType, RegistryKey, RegistryValueName, RegistryValueData, InitiatingProcessFileName
+| order by Timestamp asc
+```
+
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%205%20log.png" alt="Flag 5 log" height="220" />
+
+**Why This Matter :**  
+Changing the `DisableAntiSpyware` registry value effectively turns off a core layer of Windows Defender protection. This is a strong indicator of tampering, as attackers often disable built-in defenses to avoid detection and run their payloads unhindered. Identifying such modifications early ensures defenders can **restore security baselines** and prevent attackers from operating in a weakened security environment.
+
+---
+
