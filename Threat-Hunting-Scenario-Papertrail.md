@@ -1,4 +1,4 @@
-# Threat-Hunt/Threat-Hunting-Scenario-Papertrail.md
+# Threat-Hunting-Scenario-Papertrail
 
 A sudden promotion caught everyone off guard. **A mid-level employee, with no real achievements, suddenly rose in rank**. Whispers spread, but the truth was buried deeper — in the HR systems. **Audit logs were wiped, performance reports rewritten, and sensitive evaluations quietly stolen**. Someone was rewriting history from the inside.
 
