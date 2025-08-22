@@ -28,7 +28,7 @@ An attacker blended routine HR activity with discovery, defense evasion, and cle
 
 ### :triangular_flag_on_post: Flag 0 - Starting Point
 
-**Observation:** 
+**Observation:**  
 During the hunt for suspicious HR-related activity, we scoped file events starting **17th August 2025** and identified that `n4thani3l-vm` had the highest activity, with **3 file event counts** linked to sensitive HR directories (`HR`, `HumanResources`, `Payroll`, `Benefits`). To further validate, we pivoted to process activity and observed an unusually high execution rate of **994 processes** on the same device within the period `2025-08-19T04:15:54` UTC – `2025-08-20T03:05:00` UTC, which strongly indicated abnormal behavior consistent with script or config drops. This correlation of targeted HR file access and elevated process activity pinpointed `n4thani3l-vm` as the source of the breach.
 
 **KQL Query :**
@@ -53,9 +53,32 @@ DeviceProcessEvents
   <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%200%20-%201.png" height="120" />
 </p>
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%20vm.png" alt="Starting point vm" height="550" />
 
-**Why this matter :**
+**Why this matter :**  
 Attackers frequently stage activity around HR and payroll data because it contains sensitive personal and financial information. Coupled with abnormally high process creation, these patterns are red flags for malicious script execution, data staging, or exfiltration attempts — making immediate investigation and containment critical.
 
 ---
+
+### 🐚 Flag 1 - Initial PowerShell Execution Detection
+
+**Objective:**  
+Pinpoint the earliest suspicious PowerShell activity that marks the intruder's possible entry.
+
+**What to Hunt:**  
+Initial signs of PowerShell being used in a way that deviates from baseline usage.
+
+**Strategy:**  
+To uncover the initial intrusion point, we filtered **process execution events** `(DeviceProcessEvents)` specifically on the compromised host `n4thani3l-vm`. By pivoting on **PowerShell executions** and reviewing the earliest recorded activity, we isolated a suspicious process with creation time `2025-08-19T03:42:32.9389416Z`. This timestamp highlights the **first deviation from baseline PowerShell usage**, marking the attacker’s entry vector. Starting the hunt from the earliest trace ensures we capture the origin of compromise, which is crucial for reconstructing the attacker’s full activity chain.
+
+**KQL Query :**
+```DeviceProcessEvents
+// where Timestamp >= datetime(2025-08-19)
+| where DeviceName == "n4thani3l-vm"
+// where ProcessCommandLine has_any ("HR", "HR_Policy_Update", "HRHostnames", "HumanResources")
+| summarize by Timestamp, FileName, ActionType, ProcessCommandLine, FolderPath
+```
+
+
+
 
