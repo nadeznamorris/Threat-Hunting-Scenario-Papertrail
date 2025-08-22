@@ -314,7 +314,7 @@ Detecting post-dump inspection is crucial because **dumping memory alone doesn�
 
 ---
 
-## Flag 9 - Outbound Communication Test
+## :alien: Flag 9 - Outbound Communication Test
 
 **Objective :**  
 Catch network activity establishing contact outside the environment.
@@ -337,6 +337,38 @@ DeviceNetworkEvents
 | order by Timestamp asc
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%209%20log.png" alt="Flag 9 log" height="240" />
 
 **Why This Matter :**  
 Outbound communication to uncommon destinations, like a `.net` **domain**, often signals **attacker reconnaissance or early exfiltration attempts**. Detecting these lightweight tests is critical because even minimal network activity can indicate that sensitive information might soon leave the environment. Early detection supports **proactive mitigation and containment**.
+
+---
+
+## :postbox: Flag 10 - Covert Data Transfer
+
+**Objective :**  
+Uncover evidence of internal data leaving the environment.
+
+**Flag Value :**  
+`3.234.58.20`
+
+**What To Hunt :**  
+Activity that hints at transformation or movement of local HR data.
+
+**Strategy :**  
+We queried `DeviceNetworkEvents` on the targeted VM for outbound connections initiated by processes like `ping.exe`, `powershell.exe`, `cmd.exe`, `curl.exe`, and `wget.exe`, or command lines containing `ping`, `Test-Connection`, `Invoke-WebRequest`, or `curl`. By reviewing the `RemoteIP` and ordering events by timestamp descending, we identified the **last unusual outbound connection attempt**. This allowed us to pinpoint the **specific IP** (`3.234.58.20`) used for covert data transfer testing.
+
+**KQL Query :**  
+```
+DeviceNetworkEvents
+| where DeviceName == "n4thani3l-vm"
+| where InitiatingProcessFileName in~ ("ping.exe", "powershell.exe", "cmd.exe", "curl.exe", "wget.exe")
+   or InitiatingProcessCommandLine has_any ("ping", "Test-Connection", "Invoke-WebRequest", "curl")
+| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteUrl, RemoteIP
+| order by Timestamp desc
+```
+
+
+
+**Why This Matters :**  
+Detecting these outbound “pings” is critical because they can indicate covert testing of exfiltration channels. Even simple network requests may precede actual data transfer, so identifying the endpoints early helps prevent sensitive HR data from leaving the environment and supports timely response and containment.
