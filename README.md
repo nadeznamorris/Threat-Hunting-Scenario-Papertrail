@@ -29,10 +29,7 @@ An attacker blended routine HR activity with discovery, defense evasion, and cle
 ### :triangular_flag_on_post: Flag 0 - Starting Point
 
 **Observation:** 
-To scope the intrusion, the first query targeted HR-related file paths (HR, HumanResources, Payroll, Benefits) across all available endpoints. The logic was to surface any machines showing interaction with sensitive HR directories during the incident window. Host `n4thani3l-vm` stood out, logging 3 unique access counts. This initial pivot established the system of interest and framed subsequent hunts around this endpoint.
-
-
-<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%200.png" alt="Starting point 0" width="400" style="border: 3px solid black;" />
+During the hunt for suspicious HR-related activity, we scoped file events starting **17th August 2025** and identified that `n4thani3l-vm` had the highest activity, with **3 file event counts** linked to sensitive HR directories (`HR`, `HumanResources`, `Payroll`, `Benefits`). To further validate, we pivoted to process activity and observed an unusually high execution rate of **994 processes** on the same device within the period `2025-08-19T04:15:54` UTC – `2025-08-20T03:05:00` UTC, which strongly indicated abnormal behavior consistent with script or config drops. This correlation of targeted HR file access and elevated process activity pinpointed `n4thani3l-vm` as the source of the breach.
 
 **KQL Query :**
 ```kusto
@@ -43,7 +40,17 @@ DeviceFileEvents
 | order by count_ desc
 ```
 
+```kusto
+DeviceProcessEvents
+| where Timestamp between (datetime(2025-08-19T04:15:54.0914923Z)..datetime(2025-08-20T03:05:00.6841797Z))
+| summarize ProcessCount = count() by DeviceName
+| order by ProcessCount asc
+```
+
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%200.png" alt="Starting point 0" width="400" style="border: 3px solid black;" />
+
 **Why this matter :**
+The device n4thani3l-vm stood out with significantly fewer logged processes and a first and last seen time of Aug 19, 2025 8:50:54 AM to Aug 20, 2025 1:32:41 PM, aligning with the behavior of a temporary virtual machine likely used as an initial breach. Attackers frequently stage activity around HR data to blend into legitimate workflows. By filtering on HR folder activity, we narrowed the scope efficiently to the most relevant machine.
 
 ---
 
