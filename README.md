@@ -399,9 +399,40 @@ DeviceRegistryEvents
 | order by Timestamp desc
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2011%20log.png" alt="Flag 11 log" height="240" />
 
 **Why This Matter :**  
 Persistence via **autorun registry keys** ensures that malicious code executes whenever the system starts, allowing attackers to maintain long-term access. The use of a **PowerShell script disguised as a business tool** makes the persistence stealthy and difficult to detect. Identifying this technique is critical because it highlights an active backdoor that could allow attackers to **repeatedly re-enter the environment even after remediation steps**. Removing the registry value, investigating script origins, and checking for similar entries across other systems are essential to contain the threat.
 
 ---
+
+## :dart: FLag 12 - Targeted File Reuse / Access
+
+**Objective :**  
+Surface the document that stood out in the attack sequence.
+
+**Flag Value :**  
+`Carlos Tanaka Evaluation`
+
+**What To Hunt :**  
+Repeated or anomalous access to personnel files.
+
+**Strategy :**  
+We queried `DeviceFileEvents` on the VM to track file activity related to HR and personnel data by filtering for file names and folder paths containing keywords such as `employee`, `hr`, `payroll`, `personnel`, `staff`, and `records`. By projecting key fields and ordering events by **timestamp**, we could identify repeated access patterns. This approach surfaced the file **“Carlos Tanaka Evaluation”** as the document of unusual and repeated interest, standing out in the attack sequence.
+
+**KQL Query :**  
+```
+DeviceFileEvents
+| where DeviceName == "n4thani3l-vm"
+| where FileName has_any ("employee", "hr", "payroll", "personnel", "staff", "records")
+      or FolderPath has_any ("HR", "Employee", "Payroll", "Users", "Documents")
+| project Timestamp, FileName, FolderPath, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by Timestamp asc
+```
+
+
+
+**Why This Matter :**  
+Repeated or anomalous access to a specific personnel file often signals the **attacker’s intent or motive**. In this case, targeting **“Carlos Tanaka Evaluation”** suggests a focus on sensitive employee information that could be exploited for **espionage, insider leverage, or financial gain**. Highlighting such files is critical because it provides defenders with **insight into the adversary’s objectives**, allowing for focused containment and deeper investigation.
+
 
