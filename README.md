@@ -277,14 +277,14 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
-<img src=https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%207%20log.png alt="Flag 7 log" height="250" />
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%207%20log.png" alt="Flag 7 log" height="250" />
 
 **Why This Matter :**  
 Memory dumping of **LSASS or similar processes** is a direct path to extracting credentials, giving attackers the keys to escalate privilege and move laterally. The presence of a file like `HRConfig.json` in this context shows deliberate masquerading, blending malicious actions with trusted HR workflows. Detecting such misuse is critical, because once credentials are stolen from memory, attackers can impersonate legitimate users and expand control across the environment.
 
 ---
 
-## Flag 8 - File Inspection of Dumped Artifacts
+## :page_with_curl: Flag 8 - File Inspection of Dumped Artifacts
 
 **Objective :**  
 Detect whether memory dump contents were reviewed post-collection.
@@ -303,11 +303,40 @@ We queried `DeviceProcessEvents` for any processes accessing the previously iden
 DeviceProcessEvents
 | where DeviceName == "n4thani3l-vm"
 | where ProcessCommandLine has_any ("HRConfig.json")
-| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, SHA256
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
 | order by Timestamp asc
 ```
 
-<img src=https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%207%20log.png alt="Flag 7 log" height="250" />
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%208%20log.png" alt="Flag 8 log" height="250" />
 
 **Why This Matters :**  
-Detecting post-dump inspection is crucial because dumping memory alone doesn’t compromise sensitive data—an attacker must review the contents to extract valuable information. Identifying the use of local tools accessing unusually named or sensitive files helps confirm adversary behavior beyond collection, informing response and mitigation steps.
+Detecting post-dump inspection is crucial because **dumping memory alone doesn’t compromise sensitive data**—an attacker must review the contents to extract valuable information. Identifying the use of local tools accessing unusually named or sensitive files helps confirm **adversary behavior beyond collection**, informing response and mitigation steps.
+
+---
+
+## Flag 9 - Outbound Communication Test
+
+**Objective :**  
+Catch network activity establishing contact outside the environment.
+
+**Flag Value :**  
+`.net`
+
+**What To Hunt :**  
+Lightweight outbound requests to uncommon destinations.
+
+**Strategy :**  
+We analyzed `DeviceNetworkEvents` on the targeted VM for outbound connections initiated by `powershell.exe`, `cmd.exe`, `curl.exe`, `wget.exe`, and `bitsadmin.exe`. By inspecting the `RemoteUrl` and `RemoteIP`, we specifically identified connections targeting the `.net` **TLD**, which is unusual for internal operations. Highlighting the **.net usage** helped pinpoint suspicious network activity before any potential data exfiltration.
+
+**KQL Query :**  
+```
+DeviceNetworkEvents
+| where DeviceName == "n4thani3l-vm"
+| where InitiatingProcessFileName in~ ("powershell.exe", "cmd.exe", "curl.exe", "wget.exe", "bitsadmin.exe")
+| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteUrl, RemoteIP, Protocol, RemotePort
+| order by Timestamp asc
+```
+
+
+**Why This Matter :**  
+Outbound communication to uncommon destinations, like a `.net` **domain**, often signals **attacker reconnaissance or early exfiltration attempts**. Detecting these lightweight tests is critical because even minimal network activity can indicate that sensitive information might soon leave the environment. Early detection supports **proactive mitigation and containment**.
