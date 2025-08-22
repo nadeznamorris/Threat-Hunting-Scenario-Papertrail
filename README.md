@@ -368,7 +368,11 @@ DeviceNetworkEvents
 | order by Timestamp desc
 ```
 
-
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%2010%20log.png" alt="Flag 9 log" height="240" />
 
 **Why This Matters :**  
 Detecting these outbound “pings” is critical because they can indicate covert testing of exfiltration channels. Even simple network requests may precede actual data transfer, so identifying the endpoints early helps prevent sensitive HR data from leaving the environment and supports timely response and containment.
+
+---
+
+
