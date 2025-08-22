@@ -529,4 +529,9 @@ Final cleanup actions are critical indicators of **attacker exit strategy**. The
 
 ---
 
+## Summary
+This threat hunting scenario demonstrates how seemingly routine business events, like a sudden promotion, can mask deeper malicious activity. Through systematic investigation, we uncovered signs of credential access, memory dumping, unauthorized persistence, covert outbound communication, data staging, and deliberate audit trail disruption, all culminating in final cleanup attempts before the attacker’s exit. By correlating these activities across process, file, and registry events, we reconstructed the adversary’s timeline and exposed how insider-driven manipulation of HR records shaped the false narrative. The case highlights the importance of proactive hunting, cross-event correlation, and forensic vigilance to reveal hidden motives and safeguard organizational integrity.
+
+---
+
 
