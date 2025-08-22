@@ -58,7 +58,7 @@ DeviceProcessEvents
 
 <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%20vm.png" alt="Starting point vm" height="550" />
 
-**Why this matter :**  
+**Why This Matter :**  
 Attackers frequently stage activity around HR and payroll data because it contains sensitive personal and financial information. Coupled with abnormally high process creation, these patterns are red flags for malicious script execution, data staging, or exfiltration attempts — making immediate investigation and containment critical.
 
 ---
@@ -71,7 +71,7 @@ Pinpoint the earliest suspicious PowerShell activity that marks the intruder's p
 **Flag Value :**  
 `2025-08-19T03:42:32.9389416Z`
 
-**What to Hunt:**  
+**What To Hunt:**  
 Initial signs of PowerShell being used in a way that deviates from baseline usage.
 
 **Strategy:**  
@@ -88,7 +88,7 @@ DeviceProcessEvents
 
 <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%201%20log.png" alt="Flag 1 log" height="220" />
 
-**Why this matter :**  
+**Why This Matter :**  
 Identifying the **first suspicious PowerShell execution** on `n4thani3l-vm` at `2025-08-19T03:42:32.9389416Z` matters because it marks the attacker’s initial entry point, giving us the root of the intrusion timeline. Catching this earliest trace is critical to understand how the breach began and to prevent misinterpreting later activity as isolated. The use of the `whoami` command right after entry indicates the attacker was **validating their access level and privileges**, a common first step before deciding whether privilege escalation or further movement is needed.
 
 ---
@@ -101,7 +101,7 @@ Map user accounts available on the system.
 **Flag Value :**  
 `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`
 
-**What to Hunt :**  
+**What To Hunt :**  
 PowerShell queries that enumerates local identities.
 
 **Strategy :**  
@@ -116,5 +116,36 @@ DeviceProcessEvents
 | project Timestamp, DeviceName, InitiatingProcessFileName, FileName, ProcessCommandLine, SHA256
 ```
 
-**Why this matter :**  
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%202%20log.png" alt="Flag 2 log" height="220" />
+
+**Why This Matter :**  
 Local account enumeration is a classic **reconnaissance step** intruders take after validating initial access. It enables them to identify privileged accounts for potential escalation or impersonation. Spotting this behavior early gives defenders a chance to respond before attackers leverage administrator accounts to widen their control across the system.
+
+---
+
+### 🏰 Flag 3 - Privileged Group Assessment
+
+**Objective :**  
+Identify elevated accounts on the target system.
+
+**Flag Value :**  
+`"powershell.exe" net localgroup Administrators`
+
+**What To Hunt :**  
+A method used to check for high-privilege users.
+
+**Strategy :**  
+To detect privileged group assessment activity, we focused on process events from `n4thani3l-vm` starting **2025-08-19**, filtering specifically for executions of `powershell.exe` and `schtasks.exe` which are commonly abused for reconnaissance and persistence. By projecting command-line arguments and timestamps in sequence, we uncovered the attacker’s use of the command: 
+`"powershell.exe" net localgroup Administrators`
+This revealed a direct attempt to enumerate members of the Administrators group, indicating privilege reconnaissance.
+
+**KQL Query :**  
+```
+DeviceProcessEvents
+| where Timestamp >= datetime(2025-08-19)
+| where DeviceName == "n4thani3l-vm"
+| where FileName has_any ("schtasks.exe", "powershell.exe")
+| project Timestamp, FileName, InitiatingProcessCommandLine, ProcessCommandLine
+| order by Timestamp asc
+```
+
