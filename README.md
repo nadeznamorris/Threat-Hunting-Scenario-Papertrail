@@ -47,10 +47,15 @@ DeviceProcessEvents
 | order by ProcessCount asc
 ```
 
-<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%200.png" alt="Starting point 0" width="400" style="border: 3px solid black;" />
+<p float="left">
+  <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Starting%20point%200.png" height="120" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%200%20-%201.png" height="120" />
+</p>
+
 
 **Why this matter :**
-The device n4thani3l-vm stood out with significantly fewer logged processes and a first and last seen time of Aug 19, 2025 8:50:54 AM to Aug 20, 2025 1:32:41 PM, aligning with the behavior of a temporary virtual machine likely used as an initial breach. Attackers frequently stage activity around HR data to blend into legitimate workflows. By filtering on HR folder activity, we narrowed the scope efficiently to the most relevant machine.
+Attackers frequently stage activity around HR and payroll data because it contains sensitive personal and financial information. Coupled with abnormally high process creation, these patterns are red flags for malicious script execution, data staging, or exfiltration attempts — making immediate investigation and containment critical.
 
 ---
 
