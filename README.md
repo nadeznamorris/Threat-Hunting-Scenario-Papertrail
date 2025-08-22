@@ -149,3 +149,35 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%203%20log.png" alt="Flag 3 log" height="220" />
+
+**Why This Matter :**  
+Enumerating the **Administrators group** is a clear indicator of an attacker mapping high-privilege accounts to plan escalation or impersonation. Once attackers know who has elevated rights, they can target those accounts for credential theft, persistence, or lateral movement. Detecting this early helps defenders stop the attack before control of privileged accounts is gained.
+
+---
+
+## Flag 4 - Active Session Discovery
+
+**Objective :**  
+Reveal which sessions are currently active for potential masking.
+
+**Flag Value :**  
+`qwinsta.exe`
+
+**What to Hunt :**  
+Might be session-enumeration commands.
+
+**Strategy :**  
+To detect session discovery activity, we hunted for commands commonly tied to enumerating user sessions (`qwinsta`, `quser`, `query user`, `query session`) on `n4thani3l-vm`. By extending a custom field (`SessionEnumCmd`) to extract the exact enumeration command used, we could clearly attribute the activity and identified the execution of `qwinsta.exe`, which was used to list currently active sessions. Projecting details such as timestamp, account, and initiating process helped validate the context of this activity.
+
+**KQL Query :**  
+```
+DeviceProcessEvents
+| where DeviceName == "n4thani3l-vm"
+| where ProcessCommandLine has_any ("qwinsta","quser","query user","query session")
+| extend SessionEnumCmd = extract(@'(qwinsta|quser|query\s+user|query\s+session)', 1, ProcessCommandLine)
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName, SessionEnumCmd, ProcessCommandLine
+| order by Timestamp asc
+```
+
+
