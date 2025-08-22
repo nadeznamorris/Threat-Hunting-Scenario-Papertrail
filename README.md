@@ -223,7 +223,7 @@ Tampering with Defender settings signals an attacker’s effort to **evade detec
 
 ---
 
-## Flag 6 - Defender Policy Modification
+## :hammer: Flag 6 - Defender Policy Modification
 
 **Objective :**  
 Validate if core system protection settings were modified.
@@ -246,10 +246,37 @@ DeviceRegistryEvents
 | order by Timestamp asc
 ```
 
-<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%205%20log.png" alt="Flag 5 log" height="220" />
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%206%20log.png" alt="Flag 6 log" height="240" />
 
 **Why This Matter :**  
 Changing the `DisableAntiSpyware` registry value effectively turns off a core layer of Windows Defender protection. This is a strong indicator of tampering, as attackers often disable built-in defenses to avoid detection and run their payloads unhindered. Identifying such modifications early ensures defenders can **restore security baselines** and prevent attackers from operating in a weakened security environment.
 
 ---
 
+## Flag 7 - Access to Credential-Rich Memory Space
+
+**Objective :**  
+Identify if the attacker dumped memory content from a sensitive process.
+
+**Flag Value :**  
+`HRConfig.json`
+
+**What To Hunt :**  
+Uncommon use of system utilities interacting with protected memory.
+
+**Strategy :**  
+To detect credential harvesting attempts, we investigated suspicious interactions with **protected memory** on `n4thani3l-vm`. Using `DeviceProcessEvents`, we filtered for command-line artifacts tied to dumping LSASS or related processes (`lsass`, `procdump`, `MiniDump`, `comsvcs.dll`, `lsass.dmp`). By projecting process details alongside file names and hashes, we identified that the attacker’s activity was linked with the HR-themed file `HRConfig.json`, showing how malicious payloads were disguised under business-relevant naming to avoid scrutiny.
+
+**KQL Query :**  
+```
+DeviceProcessEvents
+| where DeviceName == "n4thani3l-vm"
+| where ProcessCommandLine has_any ("lsass", "procdump", "MiniDump", "comsvcs.dll", "lsass.dmp")
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName,
+          FileName, ProcessCommandLine, SHA256
+| order by Timestamp asc
+```
+
+
+**Why This Matter :**  
+Memory dumping of **LSASS or similar processes** is a direct path to extracting credentials, giving attackers the keys to escalate privilege and move laterally. The presence of a file like `HRConfig.json` in this context shows deliberate masquerading, blending malicious actions with trusted HR workflows. Detecting such misuse is critical, because once credentials are stolen from memory, attackers can impersonate legitimate users and expand control across the environment.
