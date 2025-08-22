@@ -136,7 +136,9 @@ A method used to check for high-privilege users.
 
 **Strategy :**  
 To detect privileged group assessment activity, we focused on process events from `n4thani3l-vm` starting **2025-08-19**, filtering specifically for executions of `powershell.exe` and `schtasks.exe` which are commonly abused for reconnaissance and persistence. By projecting command-line arguments and timestamps in sequence, we uncovered the attacker’s use of the command: 
+
 `"powershell.exe" net localgroup Administrators`
+
 This revealed a direct attempt to enumerate members of the Administrators group, indicating privilege reconnaissance.
 
 **KQL Query :**  
@@ -156,7 +158,7 @@ Enumerating the **Administrators group** is a clear indicator of an attacker map
 
 ---
 
-## Flag 4 - Active Session Discovery
+### :bust_in_silhouette: Flag 4 - Active Session Discovery
 
 **Objective :**  
 Reveal which sessions are currently active for potential masking.
@@ -180,4 +182,37 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
+<img src="https://github.com/nadeznamorris/Threat-Hunting-Scenario-Papertrail/blob/main/Flag%204%20log%202.png" alt="Flag 4 log" height="220" />
 
+**Why This Matter :**  
+Active session enumeration enables attackers to identify **who is currently logged in** and potentially hijack or impersonate those sessions. By blending into existing sessions, adversaries can avoid spawning new, suspicious processes and maintain stealth. Catching the use of `qwinsta.exe` is important because it marks the attacker’s intent to remain hidden while piggybacking on legitimate user activity.
+
+---
+
+### Flag 5 - Defender Configuration Recon
+
+**Objective :**  
+Expose tampering or inspection of AV defenses, disguised under HR activity.
+
+**Flag Value :**  
+`"powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command Set-MpPreference -DisableRealtimeMonitoring $true; Start-Sleep -Seconds 1; Set-Content -Path "C:\Users\Public\PromotionPayload.ps1" -Value "Write-Host 'Payload Executed'"`
+
+**What To Hunt :**  
+Can be PowerShell related activity.
+
+**Strategy :**  
+To detect tampering with security defenses, we queried both **process and registry event**s using the `union` operator, which allowed us to combine multiple event tables (`DeviceProcessEvents`, `DeviceRegistryEvents`) into a single result set. This ensured we didn’t miss activity that could occur at either the process execution or registry modification level. Filtering for commands tied to Windows Defender inspection or manipulation (e.g., `Set-MpPreference`, `DisableRealtimeMonitoring`, `sc stop windefend`), we identified the suspicious execution:
+
+`"powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command Set-MpPreference -DisableRealtimeMonitoring $true; Start-Sleep -Seconds 1; Set-Content -Path "C:\Users\Public\PromotionPayload.ps1" -Value "Write-Host 'Payload Executed'"`
+
+This showed clear attempts to disable real-time monitoring while dropping a malicious payload script.
+
+**KQL Query :**  
+```
+union DeviceProcessEvents, DeviceRegistryEvents
+| where DeviceName == "n4thani3l-vm"
+| where ProcessCommandLine has_any ("MpCmdRun", "Get-MpComputerStatus", "Set-MpPreference", "Add-MpPreference", "DisableRealtimeMonitoring", "RemoveDefinitions", "sc stop windefend")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, SHA256
+```
+
+<img src="" alt="Flag  log" height="220" />
